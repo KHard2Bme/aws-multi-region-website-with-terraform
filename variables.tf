@@ -11,13 +11,13 @@ variable "secondary_region" {
 variable "site_bucket_name_primary" {
   type        = string
   description = "Unique name for the primary S3 website bucket"
-  default     = "ha-static-site-primary-example-12345"
+  default     = "ha-skybound-website-primary-01"
 }
 
 variable "site_bucket_name_secondary" {
   type        = string
   description = "Unique name for the secondary S3 website bucket"
-  default     = "ha-static-site-secondary-example-12345"
+  default     = "ha-skybound-website-secondary-02"
 }
 
 variable "use_custom_domain" {
@@ -41,11 +41,11 @@ variable "hosted_zone_id" {
 variable "contact_email" {
   type        = string
   description = "Email address to subscribe to SNS alerts"
-  default     = "your.email@example.com"
+  default     = "harding_kevin@hotmail.com"
 }
 
 variable "contact_sms" {
   type        = string
   description = "Optional: phone number (E.164) for SMS alerts, e.g. +15551234567. Leave empty to skip SMS."
-  default     = ""
+  default     = "+19172578365"
 }

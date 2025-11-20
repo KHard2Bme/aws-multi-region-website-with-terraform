@@ -7,7 +7,7 @@ resource "random_id" "rep_suffix" {
   byte_length = 3
 }
 
-# ----------------------------------------
+
 # S3 Buckets (website endpoints)
 # ----------------------------------------
 resource "aws_s3_bucket" "site_primary" {
@@ -64,7 +64,7 @@ resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
   restrict_public_buckets = false
 }
 
-# ----------------------------------------
+
 # IAM role and policy for S3 replication (primary -> secondary)
 # ----------------------------------------
 resource "aws_iam_role" "s3_replication_role" {
@@ -130,7 +130,7 @@ resource "aws_iam_role_policy_attachment" "attach_replication" {
   policy_arn = aws_iam_policy.s3_replication_policy.arn
 }
 
-# ----------------------------------------
+
 # S3 Replication configuration (primary -> secondary)
 # ----------------------------------------
 resource "aws_s3_bucket_replication_configuration" "replication" {
@@ -153,7 +153,7 @@ resource "aws_s3_bucket_replication_configuration" "replication" {
   }
 }
 
-# ----------------------------------------
+
 # ACM certificate (in us-east-1) - optional: used only if domain provided
 # If you do not own a domain, use default CloudFront cert (see below)
 # ----------------------------------------
@@ -186,7 +186,7 @@ resource "aws_acm_certificate_validation" "cert_validation" {
   validation_record_fqdns = var.use_custom_domain ? [for r in aws_route53_record.cert_validation : r.fqdn] : []
 }
 
-# ----------------------------------------
+
 # CloudFront distribution
 # - uses S3 website endpoints as custom origins (HTTP)
 # - origin_group created for failover
@@ -287,7 +287,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 }
 
-# ----------------------------------------
+
 # SNS Topic and Subscriptions
 # ----------------------------------------
 resource "aws_sns_topic" "alerts" {
@@ -307,7 +307,7 @@ resource "aws_sns_topic_subscription" "sms_sub" {
   endpoint  = var.contact_sms
 }
 
-# ----------------------------------------
+
 # CloudWatch Alarms that publish to SNS
 # ----------------------------------------
 resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx_alarm" {
@@ -346,7 +346,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_primary_5xx_alarm" {
   }
 }
 
-# ----------------------------------------
+
 # CloudWatch Dashboard JSON (simple)
 # ----------------------------------------
 data "template_file" "dashboard" {
@@ -400,28 +400,5 @@ resource "aws_cloudwatch_dashboard" "dashboard" {
   dashboard_body = data.template_file.dashboard.rendered
 }
 
-# ----------------------------------------
-# (Optional) CloudWatch Synthetics Canary
-# NOTE: Many orgs prefer creating Canary via console as it needs roles/artifact S3 bucket.
-# This block is left as commented guidance. If you want it in Terraform, you'll need:
-# - an S3 bucket for artifacts
-# - an IAM role for the canary
-# - a script (ZIP or inline code) to run
-# ----------------------------------------
-# resource "aws_synthetics_canary" "heartbeat" {
-#   name = "Web-Heartbeat-Canary-${local.random_suffix}"
-#   runtime_version = "syn-nodejs-4.0"
-#   handler = "index.handler"
-#   artifact_s3_location = "s3://${aws_s3_bucket.site_primary.id}/canary-artifacts/"
-#   schedule {
-#     expression = "rate(5 minutes)"
-#   }
-#   success_retention_period = 1
-#   failure_retention_period = 7
-#   code {
-#     # Provide ZIP or S3 location or inline code depending on your environment
-#     zip_file = filebase64("canary.zip")
-#   }
-#   role_arn = aws_iam_role.canary_role.arn
-# }
+
 
