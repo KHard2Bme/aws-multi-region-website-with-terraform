@@ -22,7 +22,7 @@ alerts --- **without requiring a custom domain**.
 -   🌐 CloudFront with **Origin Group Failover**\
 -   📬 SNS email notifications\
 -   📊 CloudWatch Dashboard (ready-to-import JSON)\
--   🩺 Optional CloudWatch **Synthetics Canaries**\
+-   🩺 CloudWatch **Synthetics Canaries**\
 -   🚀 100% Infrastructure-as-Code (Terraform)\
 -   ❌ No Route 53 or domain name required
 
@@ -91,7 +91,6 @@ SNS sends an email alert when: - CloudFront 5xx errors increase\
 
 -   CloudFront Origin Groups **are automatically created** in
     Terraform.\
--   No CLI JSON is required unless you want advanced customization.\
 -   index.html and error.html must be uploaded to S3 manually unless
     automated.
 
