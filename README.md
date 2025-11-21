@@ -34,6 +34,7 @@ alerts --- **without requiring a custom domain**.
     /variables.tf
     /main.tf
     /outputs.tf
+    /dashboard.json.tpl
     /README.md
 
 ------------------------------------------------------------------------
