@@ -1,35 +1,32 @@
 locals {
-  distribution_comment = "Multi-Region static site CDN"
-  random_suffix = random_id.rep_suffix.hex
+  primary_bucket_name  = length(trim(var.primary_bucket_name)) > 0 ? var.primary_bucket_name : "${var.project_name}-primary-${random_id.rand.hex}"
+  secondary_bucket_name = length(trim(var.secondary_bucket_name)) > 0 ? var.secondary_bucket_name : "${var.project_name}-secondary-${random_id.rand.hex}"
 }
 
-resource "random_id" "rep_suffix" {
-  byte_length = 3
+resource "random_id" "rand" {
+  byte_length = 4
 }
 
-
-# S3 Buckets (website endpoints)
-# ----------------------------------------
-resource "aws_s3_bucket" "site_primary" {
-  provider = aws.primary
-  bucket   = var.site_bucket_name_primary
-  acl      = "public-read"
-
-  website {
-    index_document = "index.html"
-    error_document = "error.html"
-  }
-
-  versioning {
-    enabled = true
-  }
+###############################
+# S3 Buckets (Primary / Secondary)
+###############################
+resource "aws_s3_bucket" "primary" {
+  bucket = local.primary_bucket_name
+  acl    = "public-read"
 
   force_destroy = true
 }
 
+resource "aws_s3_bucket_versioning" "primary_versioning" {
+  bucket = aws_s3_bucket.primary.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "primary_public_block" {
-  provider = aws.primary
-  bucket = aws_s3_bucket.site_primary.id
+  bucket = aws_s3_bucket.primary.id
 
   block_public_acls   = false
   block_public_policy = false
@@ -37,26 +34,27 @@ resource "aws_s3_bucket_public_access_block" "primary_public_block" {
   restrict_public_buckets = false
 }
 
-resource "aws_s3_bucket" "site_secondary" {
+# Secondary (in alias provider)
+resource "aws_s3_bucket" "secondary" {
   provider = aws.secondary
-  bucket   = var.site_bucket_name_secondary
+  bucket   = local.secondary_bucket_name
   acl      = "public-read"
 
-  website {
-    index_document = "index.html"
-    error_document = "error.html"
-  }
-
-  versioning {
-    enabled = true
-  }
-
   force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "secondary_versioning" {
+  provider = aws.secondary
+  bucket   = aws_s3_bucket.secondary.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
   provider = aws.secondary
-  bucket = aws_s3_bucket.site_secondary.id
+  bucket = aws_s3_bucket.secondary.id
 
   block_public_acls   = false
   block_public_policy = false
@@ -64,50 +62,71 @@ resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
   restrict_public_buckets = false
 }
 
+###############################
+# S3 Website Configuration (replaces deprecated website block)
+###############################
+resource "aws_s3_bucket_website_configuration" "primary_site" {
+  bucket = aws_s3_bucket.primary.id
 
-# IAM role and policy for S3 replication (primary -> secondary)
-# ----------------------------------------
-resource "aws_iam_role" "s3_replication_role" {
-  name = "s3-replication-role-${local.random_suffix}"
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+}
+
+resource "aws_s3_bucket_website_configuration" "secondary_site" {
+  provider = aws.secondary
+  bucket   = aws_s3_bucket.secondary.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "error.html"
+  }
+}
+
+# Construct website endpoints (S3 static website endpoint pattern)
+# Format: <bucket>.s3-website-<region>.amazonaws.com
+locals {
+  primary_website_endpoint   = "${aws_s3_bucket.primary.bucket}.s3-website-${var.primary_region}.amazonaws.com"
+  secondary_website_endpoint = "${aws_s3_bucket.secondary.bucket}.s3-website-${var.secondary_region}.amazonaws.com"
+}
+
+###############################
+# IAM Role & Policy for Replication
+###############################
+resource "aws_iam_role" "replication_role" {
+  name = "${var.project_name}-replication-role-${random_id.rand.hex}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Service = "s3.amazonaws.com" }
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
 
-resource "aws_iam_policy" "s3_replication_policy" {
-  name = "s3-replication-policy-${local.random_suffix}"
+resource "aws_iam_role_policy" "replication_policy" {
+  role = aws_iam_role.replication_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
         Action = [
-          "s3:GetReplicationConfiguration",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          aws_s3_bucket.site_primary.arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObjectVersion",
-          "s3:GetObjectVersionAcl",
           "s3:GetObjectVersionForReplication",
-          "s3:GetObjectLegalHold",
-          "s3:GetObjectRetention",
-          "s3:GetObjectVersionTagging"
+          "s3:GetObjectVersionAcl",
+          "s3:GetObjectVersionTagging",
+          "s3:GetObjectVersion"
         ]
-        Resource = [
-          "${aws_s3_bucket.site_primary.arn}/*"
-        ]
+        Resource = ["${aws_s3_bucket.primary.arn}/*"]
       },
       {
         Effect = "Allow"
@@ -117,92 +136,55 @@ resource "aws_iam_policy" "s3_replication_policy" {
           "s3:ReplicateTags",
           "s3:ObjectOwnerOverrideToBucketOwner"
         ]
-        Resource = [
-          "${aws_s3_bucket.site_secondary.arn}/*"
+        Resource = ["${aws_s3_bucket.secondary.arn}/*"]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetReplicationConfiguration",
+          "s3:ListBucket"
         ]
+        Resource = [aws_s3_bucket.primary.arn]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "attach_replication" {
-  role       = aws_iam_role.s3_replication_role.name
-  policy_arn = aws_iam_policy.s3_replication_policy.arn
-}
-
-
+###############################
 # S3 Replication configuration (primary -> secondary)
-# ----------------------------------------
+###############################
 resource "aws_s3_bucket_replication_configuration" "replication" {
-  provider = aws.primary
-  bucket   = aws_s3_bucket.site_primary.id
-  role     = aws_iam_role.s3_replication_role.arn
+  bucket = aws_s3_bucket.primary.id
+  role   = aws_iam_role.replication_role.arn
 
   rule {
     id     = "replicate-all"
     status = "Enabled"
 
     filter {
-      prefix = ""
+      # empty filter => entire bucket
     }
 
     destination {
-      bucket        = aws_s3_bucket.site_secondary.arn
+      bucket        = aws_s3_bucket.secondary.arn
       storage_class = "STANDARD"
+      # AccessControlTranslation, EncryptionConfiguration etc. can be added as needed
     }
   }
 }
 
-
-# ACM certificate (in us-east-1) - optional: used only if domain provided
-# If you do not own a domain, use default CloudFront cert (see below)
-# ----------------------------------------
-resource "aws_acm_certificate" "cert" {
-  provider = aws.us_east_1
-  count    = var.use_custom_domain ? 1 : 0
-
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# If using domain validation via Route53
-resource "aws_route53_record" "cert_validation" {
-  count   = var.use_custom_domain && length(aws_acm_certificate.cert) > 0 ? length(aws_acm_certificate.cert[0].domain_validation_options) : 0
-  zone_id = var.hosted_zone_id
-  name    = aws_acm_certificate.cert[0].domain_validation_options[count.index].resource_record_name
-  type    = aws_acm_certificate.cert[0].domain_validation_options[count.index].resource_record_type
-  ttl     = 60
-  records = [aws_acm_certificate.cert[0].domain_validation_options[count.index].resource_record_value]
-}
-
-resource "aws_acm_certificate_validation" "cert_validation" {
-  provider = aws.us_east_1
-  count    = var.use_custom_domain ? 1 : 0
-
-  certificate_arn = aws_acm_certificate.cert[0].arn
-  validation_record_fqdns = var.use_custom_domain ? [for r in aws_route53_record.cert_validation : r.fqdn] : []
-}
-
-
-# CloudFront distribution
-# - uses S3 website endpoints as custom origins (HTTP)
-# - origin_group created for failover
-# ----------------------------------------
+###############################
+# CloudFront Distribution with Origin Group failover
+# Using S3 static website endpoints as custom origins (http)
+###############################
 resource "aws_cloudfront_distribution" "cdn" {
-  depends_on = [
-    aws_s3_bucket.site_primary,
-    aws_s3_bucket.site_secondary
-  ]
-
-  enabled = true
-  comment = local.distribution_comment
+  enabled             = true
+  default_root_object = "index.html"
+  comment             = "Multi-region static site CDN for ${var.project_name}"
 
   origin {
-    domain_name = aws_s3_bucket.site_primary.website_endpoint
-    origin_id   = "S3Primary"
+    domain_name = local.primary_website_endpoint
+    origin_id   = "primary-origin"
 
     custom_origin_config {
       http_port              = 80
@@ -213,8 +195,8 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   origin {
-    domain_name = aws_s3_bucket.site_secondary.website_endpoint
-    origin_id   = "S3Secondary"
+    domain_name = local.secondary_website_endpoint
+    origin_id   = "secondary-origin"
 
     custom_origin_config {
       http_port              = 80
@@ -224,25 +206,29 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
+  # Origin Group (primary -> secondary)
   origin_group {
-    origin_id = "Primary-Secondary-Group"
-
-    members {
-      origin_id = "S3Primary"
-    }
-    members {
-      origin_id = "S3Secondary"
-    }
+    origin_id = "origin-group-1"
 
     failover_criteria {
       status_codes = [500, 502, 503, 504]
     }
+
+    member {
+      origin_id = "primary-origin"
+    }
+
+    member {
+      origin_id = "secondary-origin"
+    }
   }
 
   default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "Primary-Secondary-Group"
+    target_origin_id       = "origin-group-1"
+    viewer_protocol_policy = "redirect-to-https"
+
+    allowed_methods = ["GET", "HEAD"]
+    cached_methods  = ["GET", "HEAD"]
 
     forwarded_values {
       query_string = false
@@ -251,27 +237,9 @@ resource "aws_cloudfront_distribution" "cdn" {
       }
     }
 
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
-
-  # Use custom domain certificate if provided, otherwise default CloudFront cert (no custom domain)
-  viewer_certificate {
-    dynamic "acm" {
-      for_each = var.use_custom_domain && length(aws_acm_certificate.cert) > 0 ? [1] : []
-      content {
-        acm_certificate_arn = aws_acm_certificate.cert[0].arn
-        ssl_support_method  = "sni-only"
-      }
-    }
-
-    # if not using custom domain, use default CloudFront cert (commented - Terraform requires specifying default cert via cloudfront)
-    # note: leaving viewer_certificate block empty would error; using a conditional:
-    # To let Terraform use the default CloudFront certificate for the distribution (no custom domain),
-    # define the block with cloudfront_default_certificate = true
-    cloudfront_default_certificate = var.use_custom_domain ? false : true
+    min_ttl     = 0
+    default_ttl = 3600
+    max_ttl     = 86400
   }
 
   restrictions {
@@ -280,38 +248,34 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
-  price_class = "PriceClass_All"
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
 
+  price_class = "PriceClass_All"
   tags = {
-    Name = "multi-region-static-site-cdn"
+    Name = "${var.project_name}-cdn"
   }
 }
 
-
-# SNS Topic and Subscriptions
-# ----------------------------------------
+###############################
+# SNS Topic + subscription
+###############################
 resource "aws_sns_topic" "alerts" {
-  name = "SiteFailoverAlerts-${local.random_suffix}"
+  name = "${var.project_name}-alerts-${random_id.rand.hex}"
 }
 
-resource "aws_sns_topic_subscription" "email_sub" {
+resource "aws_sns_topic_subscription" "email" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
-  endpoint  = var.contact_email
+  endpoint  = var.notification_email
 }
 
-resource "aws_sns_topic_subscription" "sms_sub" {
-  count     = var.contact_sms == "" ? 0 : 1
-  topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "sms"
-  endpoint  = var.contact_sms
-}
-
-
-# CloudWatch Alarms that publish to SNS
-# ----------------------------------------
-resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx_alarm" {
-  alarm_name          = "CloudFront-5xx-Alarm-${local.random_suffix}"
+###############################
+# CloudWatch Alarms (example: CloudFront 5xx error rate)
+###############################
+resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
+  alarm_name          = "${var.project_name}-cloudfront-5xx-${random_id.rand.hex}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "5xxErrorRate"
@@ -319,7 +283,7 @@ resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx_alarm" {
   statistic           = "Average"
   period              = 300
   threshold           = 0.01
-  alarm_description   = "CloudFront 5xx error rate exceeded threshold"
+  alarm_description   = "CloudFront 5xxErrorRate > 0.01"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   dimensions = {
@@ -328,76 +292,16 @@ resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx_alarm" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "s3_primary_5xx_alarm" {
-  alarm_name          = "S3Primary-5xx-Alarm-${local.random_suffix}"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "5xxErrors"
-  namespace           = "AWS/S3"
-  statistic           = "Sum"
-  period              = 300
-  threshold           = 1
-  alarm_description   = "S3 primary bucket reported 5xx errors"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    BucketName  = aws_s3_bucket.site_primary.id
-    StorageType = "AllStorageTypes"
-  }
-}
-
-
-# CloudWatch Dashboard JSON (simple)
-# ----------------------------------------
-data "template_file" "dashboard" {
-  template = <<EOF
-{
-  "widgets":[
-    {
-      "type":"metric",
-      "x":0,"y":0,"width":24,"height":6,
-      "properties":{
-        "metrics":[
-          [ "AWS/CloudFront","5xxErrorRate","DistributionId","${aws_cloudfront_distribution.cdn.id}","Region","Global"]
-        ],
-        "period":300,
-        "title":"CloudFront 5xx Error Rate",
-        "view":"timeSeries"
-      }
-    },
-    {
-      "type":"metric",
-      "x":0,"y":6,"width":12,"height":6,
-      "properties":{
-        "metrics":[
-          [ "AWS/CloudFront","Requests","DistributionId","${aws_cloudfront_distribution.cdn.id}","Region","Global"]
-        ],
-        "period":300,
-        "title":"CloudFront Request Volume",
-        "view":"timeSeries"
-      }
-    },
-    {
-      "type":"metric",
-      "x":12,"y":6,"width":12,"height":6,
-      "properties":{
-        "metrics":[
-          ["AWS/S3","4xxErrors","BucketName","${aws_s3_bucket.site_primary.id}","StorageType","AllStorageTypes"],
-          ["AWS/S3","5xxErrors","BucketName","${aws_s3_bucket.site_primary.id}","StorageType","AllStorageTypes"]
-        ],
-        "period":300,
-        "title":"S3 Primary Errors (4xx/5xx)",
-        "view":"timeSeries"
-      }
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_cloudwatch_dashboard" "dashboard" {
-  dashboard_name = "StaticSite-HA-Dashboard-${local.random_suffix}"
-  dashboard_body = data.template_file.dashboard.rendered
+###############################
+# CloudWatch Dashboard - rendered from template
+###############################
+resource "aws_cloudwatch_dashboard" "main" {
+  dashboard_name = "${var.project_name}-dashboard"
+  dashboard_body = templatefile("${path.module}/dashboard.json.tpl", {
+    distribution_id = aws_cloudfront_distribution.cdn.id
+    primary_bucket  = aws_s3_bucket.primary.bucket
+    secondary_bucket = aws_s3_bucket.secondary.bucket
+  })
 }
 
 
