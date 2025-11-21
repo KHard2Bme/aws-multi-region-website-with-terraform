@@ -12,8 +12,6 @@ resource "random_id" "rand" {
 ###############################
 resource "aws_s3_bucket" "primary" {
   bucket = local.primary_bucket_name
-  acl    = "public-read"
-
   force_destroy = true
 }
 
@@ -28,18 +26,30 @@ resource "aws_s3_bucket_versioning" "primary_versioning" {
 resource "aws_s3_bucket_public_access_block" "primary_public_block" {
   bucket = aws_s3_bucket.primary.id
 
-  block_public_acls   = false
+  block_public_acls   = true
   block_public_policy = false
-  ignore_public_acls  = false
+  ignore_public_acls  = true
   restrict_public_buckets = false
+}
+
+# Public bucket policy for primary (S3 static website access)
+resource "aws_s3_bucket_policy" "primary_policy" {
+  bucket = aws_s3_bucket.primary.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = ["s3:GetObject"]
+      Resource  = "${aws_s3_bucket.primary.arn}/*"
+    }]
+  })
 }
 
 # Secondary (in alias provider)
 resource "aws_s3_bucket" "secondary" {
   provider = aws.secondary
   bucket   = local.secondary_bucket_name
-  acl      = "public-read"
-
   force_destroy = true
 }
 
@@ -56,10 +66,25 @@ resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
   provider = aws.secondary
   bucket = aws_s3_bucket.secondary.id
 
-  block_public_acls   = false
+  block_public_acls   = true
   block_public_policy = false
-  ignore_public_acls  = false
+  ignore_public_acls  = true
   restrict_public_buckets = false
+}
+
+# Public bucket policy for secondary
+resource "aws_s3_bucket_policy" "secondary_policy" {
+  provider = aws.secondary
+  bucket   = aws_s3_bucket.secondary.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = ["s3:GetObject"]
+      Resource  = "${aws_s3_bucket.secondary.arn}/*"
+    }]
+  })
 }
 
 ###############################
