@@ -1,6 +1,6 @@
 locals {
-  primary_bucket_name  = length(trim(var.primary_bucket_name)) > 0 ? var.primary_bucket_name : "${var.project_name}-primary-${random_id.rand.hex}"
-  secondary_bucket_name = length(trim(var.secondary_bucket_name)) > 0 ? var.secondary_bucket_name : "${var.project_name}-secondary-${random_id.rand.hex}"
+  primary_bucket_name  = length(var.primary_bucket_name) > 0 ? var.primary_bucket_name : "${var.project_name}-primary-${random_id.rand.hex}"
+  secondary_bucket_name = length(var.secondary_bucket_name) > 0 ? var.secondary_bucket_name : "${var.project_name}-secondary-${random_id.rand.hex}"
 }
 
 resource "random_id" "rand" {
