@@ -12,6 +12,7 @@
         ],
         "period": 300,
         "stat": "Average",
+        "region": "us-east-1",
         "title": "CloudFront 5xx Error Rate"
       }
     },
@@ -27,6 +28,7 @@
         ],
         "period": 300,
         "stat": "Sum",
+        "region": "us-east-1",
         "title": "CloudFront Requests"
       }
     },
@@ -43,6 +45,7 @@
         ],
         "period": 300,
         "stat": "Sum",
+        "region": "us-east-1",
         "title": "S3 Primary Errors"
       }
     },
@@ -52,6 +55,7 @@
       "y": 12,
       "width": 24,
       "height": 2,
+      "region": "us-east-1",
       "properties": {
         "markdown": "CloudFront Distribution: **${distribution_id}**  \nPrimary bucket: **${primary_bucket}**  \nSecondary bucket: **${secondary_bucket}**"
       }

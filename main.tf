@@ -72,20 +72,6 @@ resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
   restrict_public_buckets = false
 }
 
-# Public bucket policy for secondary
-resource "aws_s3_bucket_policy" "secondary_policy" {
-  provider = aws.secondary
-  bucket   = aws_s3_bucket.secondary.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = "*"
-      Action    = ["s3:GetObject"]
-      Resource  = "${aws_s3_bucket.secondary.arn}/*"
-    }]
-  })
-}
 
 ###############################
 # S3 Website Configuration (replaces deprecated website block)
@@ -182,6 +168,11 @@ resource "aws_s3_bucket_replication_configuration" "replication" {
   bucket = aws_s3_bucket.primary.id
   role   = aws_iam_role.replication_role.arn
 
+  depends_on = [
+    aws_s3_bucket_versioning.primary_versioning,
+    aws_s3_bucket_versioning.secondary_versioning
+  ]
+
   rule {
     id     = "replicate-all"
     status = "Enabled"
@@ -193,7 +184,11 @@ resource "aws_s3_bucket_replication_configuration" "replication" {
     destination {
       bucket        = aws_s3_bucket.secondary.arn
       storage_class = "STANDARD"
-      # AccessControlTranslation, EncryptionConfiguration etc. can be added as needed
+      
+    }
+
+     delete_marker_replication {
+      status = "Disabled"  # or "Enabled" if you want delete markers replicated
     }
   }
 }
