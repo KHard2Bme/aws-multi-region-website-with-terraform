@@ -12,7 +12,7 @@ variable "secondary_region" {
 
 variable "project_name" {
   type    = string
-  default = "multi-region-static-site"
+  default = "multi-region-static-website"
 }
 
 variable "notification_email" {

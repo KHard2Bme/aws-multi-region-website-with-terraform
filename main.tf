@@ -7,7 +7,7 @@ resource "random_id" "rand" {
   byte_length = 4
 }
 
-###############################
+
 # S3 Buckets (Primary / Secondary)
 ###############################
 resource "aws_s3_bucket" "primary" {
@@ -73,7 +73,7 @@ resource "aws_s3_bucket_public_access_block" "secondary_public_block" {
 }
 
 
-###############################
+
 # S3 Website Configuration (replaces deprecated website block)
 ###############################
 resource "aws_s3_bucket_website_configuration" "primary_site" {
@@ -108,7 +108,7 @@ locals {
   secondary_website_endpoint = "${aws_s3_bucket.secondary.bucket}.s3-website-${var.secondary_region}.amazonaws.com"
 }
 
-###############################
+
 # IAM Role & Policy for Replication
 ###############################
 resource "aws_iam_role" "replication_role" {
@@ -161,7 +161,7 @@ resource "aws_iam_role_policy" "replication_policy" {
   })
 }
 
-###############################
+
 # S3 Replication configuration (primary -> secondary)
 ###############################
 resource "aws_s3_bucket_replication_configuration" "replication" {
@@ -193,14 +193,14 @@ resource "aws_s3_bucket_replication_configuration" "replication" {
   }
 }
 
-###############################
+
 # CloudFront Distribution with Origin Group failover
 # Using S3 static website endpoints as custom origins (http)
 ###############################
 resource "aws_cloudfront_distribution" "cdn" {
   enabled             = true
   default_root_object = "index.html"
-  comment             = "Multi-region static site CDN for ${var.project_name}"
+  comment             = "Multi-region static website CDN for ${var.project_name}"
 
   origin {
     domain_name = local.primary_website_endpoint
@@ -231,7 +231,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_id = "origin-group-1"
 
     failover_criteria {
-      status_codes = [500, 502, 503, 504]
+      status_codes = [403,404, 500, 502, 503, 504]
     }
 
     member {
@@ -258,8 +258,8 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
 
     min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
+    default_ttl = 60
+    max_ttl     = 300
   }
 
   restrictions {
@@ -278,7 +278,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 }
 
-###############################
+
 # SNS Topic + subscription
 ###############################
 resource "aws_sns_topic" "alerts" {
@@ -291,19 +291,19 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.notification_email
 }
 
+
+# CloudWatch Alarms (example: CloudFront 4xx 5xx error rate)
 ###############################
-# CloudWatch Alarms (example: CloudFront 5xx error rate)
-###############################
-resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
-  alarm_name          = "${var.project_name}-cloudfront-5xx-${random_id.rand.hex}"
+resource "aws_cloudwatch_metric_alarm" "cloudfront_4xx_5xx" {
+  alarm_name          = "${var.project_name}-cloudfront-4xx-5xx-${random_id.rand.hex}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  metric_name         = "5xxErrorRate"
+  metric_name         = "4xx5xxErrorRate"
   namespace           = "AWS/CloudFront"
   statistic           = "Average"
   period              = 300
   threshold           = 0.01
-  alarm_description   = "CloudFront 5xxErrorRate > 0.01"
+  alarm_description   = "CloudFront 4xx5xxErrorRate > 0.01"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   dimensions = {
@@ -312,7 +312,7 @@ resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
   }
 }
 
-###############################
+
 # CloudWatch Dashboard - rendered from template
 ###############################
 resource "aws_cloudwatch_dashboard" "main" {

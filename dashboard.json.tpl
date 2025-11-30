@@ -8,7 +8,7 @@
       "height": 6,
       "properties": {
         "metrics": [
-          [ "AWS/CloudFront", "5xxErrorRate", "DistributionId", "${distribution_id}", { "label": "5xxErrorRate" } ]
+          [ "AWS/CloudFront", "4xx5xxErrorRate", "DistributionId", "${distribution_id}", { "label": "4xx5xxErrorRate" } ]
         ],
         "period": 300,
         "stat": "Average",
