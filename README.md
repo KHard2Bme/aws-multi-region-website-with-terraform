@@ -1,102 +1,194 @@
-# Multi-Region Highly Available Static Website on AWS (Terraform)
+# 🚀 Multi-AZ & Multi-Region Failover Testing with AWS CloudFront, EC2, SNS & CloudWatch
 
-[![Terraform](https://img.shields.io/badge/Terraform-IaC-5C4EE5.svg)](https://www.terraform.io/)\
-[![AWS](https://img.shields.io/badge/AWS-Cloud-orange.svg)](https://aws.amazon.com/)\
-[![CloudFront](https://img.shields.io/badge/CloudFront-Multi--Region%20Failover-blueviolet.svg)](https://aws.amazon.com/cloudfront/)\
-[![S3](https://img.shields.io/badge/S3-Static%20Hosting-green.svg)](https://aws.amazon.com/s3/)\
-[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
+### Fully Automated with Terraform
 
-A fully automated **Intermediate-Level AWS Project** built using
-**Terraform**, featuring a multi-region static website using CloudFront
-Origin Groups, S3 replication, CloudWatch monitoring, and SNS email
-alerts --- **without requiring a custom domain**.
+This project deploys a complete **high-availability failover testing
+environment** on AWS using Terraform.\
+It allows you to **simulate Availability Zone failure** *and* **full
+regional failure**, and verify:
 
-------------------------------------------------------------------------
+-   CloudFront origin group failover\
+-   Multi-AZ redundancy inside one region\
+-   Cross-region failover\
+-   CloudWatch 5xx error alarms\
+-   SNS email notifications\
+-   Dashboard visualization
 
-## ⭐ Features
-
--   🌎 **Primary Region:** us-east-1\
--   🗺️ **Secondary Region:** us-west-2\
--   📦 S3 static website hosting (primary + secondary)\
--   🔁 Cross-Region Replication (CRR)\
--   🌐 CloudFront with **Origin Group Failover**\
--   📬 SNS email notifications\
--   📊 CloudWatch Dashboard (ready-to-import JSON)\
--   🩺 CloudWatch **Synthetics Canaries**\
--   🚀 100% Infrastructure-as-Code (Terraform)\
--   ❌ No Route 53 or domain name required
+This project is ideal for **disaster recovery testing**, **resiliency
+demos**, **training labs**, and **CloudFront failover validation**.
 
 ------------------------------------------------------------------------
 
-## 📁 Repository Structure
+## ✨ Features
 
-    /providers.tf
-    /variables.tf
-    /main.tf
-    /outputs.tf
-    /dashboard.json.tpl
-    /README.md
+### 🏢 **Primary Region (Multi-AZ Redundant)**
+
+-   Custom VPC\
+-   2 public subnets (each in different AZs)\
+-   2 EC2 web servers (NGINX)\
+-   Each instance serves a different HTML message for identification\
+-   Used as the **primary origin group member**
+
+### 🌎 **Secondary Region (Regional Failover)**
+
+-   Separate VPC\
+-   1 public subnet\
+-   1 EC2 web server (NGINX)\
+-   Used when entire primary region fails
+
+### 🌐 **CloudFront Distribution**
+
+-   Origin group with failover criteria\
+-   Primary region → Secondary region\
+-   Failover triggers on: 500, 502, 503, 504\
+-   Public CDN endpoint output after deployment
+
+### 🔔 **Monitoring & Alerts**
+
+-   SNS email notifications\
+-   CloudWatch alarm for 5xx errors\
+-   CloudWatch dashboard with charts\
+-   Designed to spike when AZ or region fails
 
 ------------------------------------------------------------------------
 
-## 📝 Prerequisites
+# 📁 Repository Structure
+
+    /
+    ├── main.tf
+    ├── providers.tf
+    ├── variables.tf
+    ├── outputs.tf
+    └── README.md
+
+------------------------------------------------------------------------
+
+# 🧰 Prerequisites
+
+Before deploying, ensure you have:
 
 -   AWS account\
--   AWS CLI installed + configured\
--   Terraform v1.5+\
--   Verified email for SNS subscription
+-   IAM user with admin access\
+-   Terraform v1.2+\
+-   AWS CLI configured\
+-   SSH key pair (optional)
 
 ------------------------------------------------------------------------
 
-## 🚀 Deployment
+# ⚙️ Terraform Deployment
 
-1.  Initialize Terraform\
+### 1. Clone the Repository
 
-```{=html}
-<!-- -->
+``` bash
+git clone https://github.com/<your-repo>/cloudfront-multi-region-failover.git
+cd cloudfront-multi-region-failover
 ```
-    terraform init
 
-2.  Review the changes\
+### 2. Configure Variables
 
-```{=html}
-<!-- -->
+Update `variables.tf` with:
+
+    primary_region    = "us-east-1"
+    secondary_region  = "us-west-2"
+    sns_email         = "your-email@example.com"
+
+Confirm the SNS email subscription after running `terraform apply`.
+
+### 3. Initialize Terraform
+
+``` bash
+terraform init
 ```
-    terraform plan
 
-3.  Deploy\
+### 4. Plan Deployment
 
-```{=html}
-<!-- -->
+``` bash
+terraform plan
 ```
-    terraform apply
 
-4.  After deployment, Terraform outputs your CloudFront URL:
+### 5. Apply Deployment
 
-```{=html}
-<!-- -->
+``` bash
+terraform apply
 ```
-    d123exampleabcd.cloudfront.net
 
 ------------------------------------------------------------------------
 
-## 🔔 Notifications
+# 🏁 Outputs
 
-SNS sends an email alert when: - CloudFront 5xx errors increase\
-- S3 replication issues occur (optional alarm)\
-- Synthetic canary health checks fail
+You will receive:
 
-------------------------------------------------------------------------
-
-## 🧩 Notes
-
--   CloudFront Origin Groups **are automatically created** in
-    Terraform.\
--   index.html and error.html must be uploaded to S3 manually unless
-    automated.
+-   CloudFront domain\
+-   Public DNS of EC2 instances\
+-   Secondary region failover endpoint
 
 ------------------------------------------------------------------------
 
-## 📜 License
+# 🔥 Failover Testing Guide
 
-MIT License © 2025
+## **🟦 Scenario 1 --- AZ Failure**
+
+Stop ONE EC2 instance in the primary region.
+
+Expected: - CloudFront still serves traffic\
+- No regional failover\
+- Minimal 5xx
+
+------------------------------------------------------------------------
+
+## **🟥 Scenario 2 --- Regional Failure**
+
+Stop ALL EC2 instances in the primary region.
+
+Expected: - CloudFront fails over to secondary region\
+- SNS alert triggered\
+- 5xx spike on dashboard
+
+------------------------------------------------------------------------
+
+# 📄 Automated Failover Test Script
+
+See `failover-test.sh` in the repo for real-time monitoring.
+
+------------------------------------------------------------------------
+
+# 📊 Dashboard
+
+Find it under:
+
+    CloudFront-Regional-Failover
+
+Shows 5xx trends during failovers.
+
+------------------------------------------------------------------------
+
+# 🧹 Cleanup
+
+``` bash
+terraform destroy
+```
+
+------------------------------------------------------------------------
+
+# 📐 Architecture Diagram
+
+    CloudFront → Origin Group
+        ├── Primary Region (Multi-AZ)
+        │     ├── EC2 AZ1
+        │     └── EC2 AZ2
+        └── Secondary Region (Failover)
+              └── EC2
+
+------------------------------------------------------------------------
+
+# 🏆 Summary
+
+This project provides:
+
+✔ Multi-AZ redundancy\
+✔ Multi-region failover\
+✔ CloudFront origin routing\
+✔ Alarms + notifications\
+✔ Automated failover testing
+
+Perfect for resiliency demos, DR validation, and training labs.
