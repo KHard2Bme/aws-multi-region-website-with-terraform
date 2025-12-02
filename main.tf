@@ -1,28 +1,47 @@
-# Networking (Primary Region)
-##############################
-resource "aws_vpc" "primary" {
-  cidr_block = "10.0.0.0/16"
+#####################################
+# Primary VPC (multi-AZ)
+#####################################
+
+module "primary_vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "primary-vpc"
+  cidr = var.primary_vpc_cidr
+
+  azs            = var.primary_azs
+  public_subnets = var.primary_public_subnets
 }
 
-resource "aws_subnet" "primary_az" {
-  count                   = var.az_count
-  vpc_id                  = aws_vpc.primary.id
-  cidr_block              = cidrsubnet("10.0.0.0/16", 4, count.index)
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-  map_public_ip_on_launch = true
+#####################################
+# Secondary VPC (single region failover)
+#####################################
+
+module "secondary_vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "secondary-vpc"
+  cidr = var.secondary_vpc_cidr
+
+  azs            = var.secondary_azs
+  public_subnets = var.secondary_public_subnets
+
+  providers = {
+    aws = aws.secondary
+  }
 }
 
-data "aws_availability_zones" "available" {}
+#####################################
+# Security Group for ALBs + EC2
+#####################################
 
-# Security Group
-####################
-resource "aws_security_group" "web" {
+resource "aws_security_group" "web_sg" {
   name        = "web-sg"
-  description = "Allow inbound HTTP from the internet"
-  vpc_id      = aws_vpc.primary.id
+  description = "Allow HTTP traffic"
+  vpc_id      = module.primary_vpc.vpc_id
 
   ingress {
-    description = "HTTP from anywhere"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -30,7 +49,6 @@ resource "aws_security_group" "web" {
   }
 
   egress {
-    description = "All outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -38,178 +56,243 @@ resource "aws_security_group" "web" {
   }
 }
 
-# EC2 Instances in each AZ (Primary Region)
-###########################################
+resource "aws_security_group" "web_sg_secondary" {
+  name        = "web-sg-secondary"
+  description = "Allow HTTP traffic"
+  vpc_id      = module.secondary_vpc.vpc_id
+  provider    = aws.secondary
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+#####################################
+# EC2 Instances (Primary Region)
+#####################################
+
 resource "aws_instance" "primary" {
-  count         = var.az_count
-  ami           = data.aws_ami.al2023.id
-  instance_type = var.instance_type
-  subnet_id     = aws_subnet.primary_az[count.index].id
-  key_name      = var.key_name
-  vpc_security_group_ids = [aws_security_group.web.id]
+  count                  = 2
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = module.primary_vpc.public_subnets[count.index]
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 
   user_data = <<-EOF
-    #!/bin/bash
-    dnf install -y nginx
-    echo "PRIMARY REGION – AZ ${count.index}" > /usr/share/nginx/html/index.html
-    systemctl enable nginx
-    systemctl start nginx
-  EOF
+              #!/bin/bash
+              yum install -y nginx
+              echo "<h1>PRIMARY REGION - Instance ${count.index}</h1>" > /usr/share/nginx/html/index.html
+              systemctl enable nginx
+              systemctl start nginx
+              EOF
 
   tags = {
-    Name = "primary-az-${count.index}"
+    Name = "primary-${count.index}"
   }
 }
 
-data "aws_ami" "al2023" {
-  owners      = ["amazon"]
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*"]
-  }
-}
-
-# EC2 Instance (Secondary Region)
-##############################
-resource "aws_vpc" "secondary" {
-  provider   = aws.secondary
-  cidr_block = "10.1.0.0/16"
-}
-
-resource "aws_subnet" "secondary" {
-  provider                = aws.secondary
-  vpc_id                  = aws_vpc.secondary.id
-  cidr_block              = "10.1.1.0/24"
-  map_public_ip_on_launch = true
-}
-
-resource "aws_security_group" "secondary_web" {
-  provider    = aws.secondary
-  vpc_id      = aws_vpc.secondary.id
-
-  ingress {
-    description = "HTTP from anywhere"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "All outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+#####################################
+# EC2 Instances (Secondary Region)
+#####################################
 
 resource "aws_instance" "secondary" {
-  provider                = aws.secondary
-  ami                     = data.aws_ami.al2023.id
-  instance_type           = var.instance_type
-  subnet_id               = aws_subnet.secondary.id
-  vpc_security_group_ids  = [aws_security_group.secondary_web.id]
+  count                  = 1
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = module.secondary_vpc.public_subnets[0]
+  key_name               = var.key_name
+  provider               = aws.secondary
+  vpc_security_group_ids = [aws_security_group.web_sg_secondary.id]
 
   user_data = <<-EOF
-    #!/bin/bash
-    dnf install -y nginx
-    echo "SECONDARY REGION FAILOVER" > /usr/share/nginx/html/index.html
-    systemctl enable nginx
-    systemctl start nginx
-  EOF
+              #!/bin/bash
+              yum install -y nginx
+              echo "<h1>SECONDARY REGION - Failover Instance</h1>" > /usr/share/nginx/html/index.html
+              systemctl enable nginx
+              systemctl start nginx
+              EOF
+
+  tags = {
+    Name = "secondary-0"
+  }
 }
 
-# Cloudfront Distribution with Origin Group
-##############################################
+#####################################
+# Primary ALB
+#####################################
+
+resource "aws_lb" "primary_lb" {
+  name               = "primary-alb"
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.web_sg.id]
+  subnets            = module.primary_vpc.public_subnets
+}
+
+resource "aws_lb_target_group" "primary_tg" {
+  name     = "primary-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = module.primary_vpc.vpc_id
+
+  health_check {
+    path = "/"
+    port = "80"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "primary_attachments" {
+  count            = length(aws_instance.primary)
+  target_group_arn = aws_lb_target_group.primary_tg.arn
+  target_id        = aws_instance.primary[count.index].id
+  port             = 80
+}
+
+resource "aws_lb_listener" "primary_listener" {
+  load_balancer_arn = aws_lb.primary_lb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.primary_tg.arn
+  }
+}
+
+#####################################
+# Secondary ALB (Failover Region)
+#####################################
+
+resource "aws_lb" "secondary_lb" {
+  provider           = aws.secondary
+  name               = "secondary-alb"
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.web_sg_secondary.id]
+  subnets            = module.secondary_vpc.public_subnets
+}
+
+resource "aws_lb_target_group" "secondary_tg" {
+  provider = aws.secondary
+
+  name     = "secondary-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = module.secondary_vpc.vpc_id
+
+  health_check {
+    path = "/"
+    port = "80"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "secondary_attach" {
+  provider = aws.secondary
+
+  target_group_arn = aws_lb_target_group.secondary_tg.arn
+  target_id        = aws_instance.secondary[0].id
+  port             = 80
+}
+
+resource "aws_lb_listener" "secondary_listener" {
+  provider = aws.secondary
+
+  load_balancer_arn = aws_lb.secondary_lb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.secondary_tg.arn
+  }
+}
+
+#####################################
+# CloudFront Distribution
+#####################################
+
 resource "aws_cloudfront_distribution" "site" {
-  origin_group {
-    origin_id = "primary-group"
-    failover_criteria {
-      status_codes = [500, 502, 503, 504]
-    }
-    members {
-      origin_id = "primary-origin"
-    }
-    members {
-      origin_id = "secondary-origin"
-    }
-  }
-
-  origin {
-    domain_name = aws_instance.primary[0].public_dns
-    origin_id   = "primary-origin"
-  }
-
-  origin {
-    domain_name = aws_instance.secondary.public_dns
-    origin_id   = "secondary-origin"
-  }
-
   enabled             = true
   default_root_object = "index.html"
 
+  origin {
+    domain_name = aws_lb.primary_lb.dns_name
+    origin_id   = "primary-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin {
+    domain_name = aws_lb.secondary_lb.dns_name
+    origin_id   = "secondary-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  origin_group {
+    origin_id = "group-1"
+
+    member {
+      origin_id = "primary-origin"
+    }
+
+    member {
+      origin_id = "secondary-origin"
+    }
+
+    failover_criteria {
+      status_codes = [500, 502, 503, 504]
+    }
+  }
+
   default_cache_behavior {
-    target_origin_id = "primary-group"
-    viewer_protocol_policy = "allow-all"
+    target_origin_id       = "group-1"
+    viewer_protocol_policy = "redirect-to-https"
+
+    allowed_methods = ["GET", "HEAD"]
+    cached_methods  = ["GET", "HEAD"]
+
+    forwarded_values {
+      query_string = false
+
+      cookies {
+        forward = "none"
+      }
+    }
+
+    min_ttl     = 0
+    default_ttl = 3600
+    max_ttl     = 86400
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
   }
 
   viewer_certificate {
     cloudfront_default_certificate = true
   }
-}
-
-# SNS + Alarm + Dashboard
-##################################
-resource "aws_sns_topic" "alerts" {
-  name = "cloudfront-alerts"
-}
-
-resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "email"
-  endpoint  = var.sns_email
-}
-
-resource "aws_cloudwatch_metric_alarm" "cf_5xx" {
-  alarm_name          = "CloudFront-5xx-Errors"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  threshold           = 10
-  metric_name         = "5xxErrorRate"
-  namespace           = "AWS/CloudFront"
-  statistic           = "Sum"
-
-  dimensions = {
-    DistributionId = aws_cloudfront_distribution.site.id
-  }
-
-  alarm_actions = [aws_sns_topic.alerts.arn]
-}
-
-resource "aws_cloudwatch_dashboard" "cf_dashboard" {
-  dashboard_name = "CloudFront-Regional-Failover"
-
-  dashboard_body = <<EOF
-{
-  "widgets": [
-    {
-      "type": "metric",
-      "x": 0, "y": 0, "width": 24, "height": 6,
-      "properties": {
-        "metrics": [
-          [ "AWS/CloudFront", "5xxErrorRate", "DistributionId", "${aws_cloudfront_distribution.site.id}" ]
-        ],
-        "period": 300,
-        "stat": "Sum",
-        "title": "CloudFront 5xx Errors"
-      }
-    }
-  ]
-}
-EOF
 }
 
 
