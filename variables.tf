@@ -1,34 +1,30 @@
 variable "primary_region" {
-  type    = string
-  default = "us-east-1"
-  description = "Primary AWS region (website origin)"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "secondary_region" {
-  type    = string
-  default = "us-west-2"
-  description = "Secondary AWS region (replica origin)"
-}
-
-variable "project_name" {
-  type    = string
-  default = "multi-region-static-website"
-}
-
-variable "notification_email" {
   type        = string
-  description = "Email address to subscribe to SNS alerts (must confirm subscription)"
+  default     = "us-west-2"
 }
 
-variable "primary_bucket_name" {
+variable "instance_type" {
   type        = string
-  description = "Optional explicit primary bucket name. Leave empty to auto-generate."
-  default     = ""
+  default     = "t3.micro"
 }
 
-variable "secondary_bucket_name" {
+variable "key_name" {
   type        = string
-  description = "Optional explicit secondary bucket name. Leave empty to auto-generate."
-  default     = ""
+  default     = null
 }
+
+variable "sns_email" {
+  type        = string
+}
+
+variable "az_count" {
+  type        = number
+  default     = 2
+}
+
 

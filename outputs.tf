@@ -1,17 +1,13 @@
+output "primary_az_endpoints" {
+  value = [for i in aws_instance.primary : i.public_dns]
+}
+
+output "secondary_region_endpoint" {
+  value = aws_instance.secondary.public_dns
+}
+
 output "cloudfront_domain" {
-  description = "CloudFront distribution domain to use as website URL"
-  value       = aws_cloudfront_distribution.cdn.domain_name
+  value = aws_cloudfront_distribution.site.domain_name
 }
 
-output "primary_bucket_name" {
-  value = aws_s3_bucket.primary.bucket
-}
-
-output "secondary_bucket_name" {
-  value = aws_s3_bucket.secondary.bucket
-}
-
-output "sns_topic_arn" {
-  value = aws_sns_topic.alerts.arn
-}
 
