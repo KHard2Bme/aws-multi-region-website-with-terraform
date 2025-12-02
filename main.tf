@@ -108,7 +108,7 @@ resource "aws_instance" "primary" {
 
 resource "aws_instance" "secondary" {
   count                  = 1
-  ami                    = var.ami_id
+  ami                    = var.ami_id2
   instance_type          = var.instance_type
   subnet_id              = module.secondary_vpc.public_subnets[0]
   key_name               = var.key_name

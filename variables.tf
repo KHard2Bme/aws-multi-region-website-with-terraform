@@ -25,7 +25,7 @@ variable "primary_azs" {
 
 variable "secondary_azs" {
   type    = list(string)
-  default = ["us-west-2a"]
+  default = ["us-west-2a", "us-west-2b"]
 }
 
 variable "primary_public_subnets" {
@@ -35,10 +35,14 @@ variable "primary_public_subnets" {
 
 variable "secondary_public_subnets" {
   type    = list(string)
-  default = ["10.1.1.0/24"]
+  default = ["10.1.1.0/24", "10.1.2.0/24"]
 }
 
 variable "ami_id" {
+  type = string
+}
+
+variable "ami_id2" {
   type = string
 }
 
