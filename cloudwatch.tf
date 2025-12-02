@@ -1,9 +1,10 @@
-############################
-# SNS topic & email subscription
-############################
+##################################################
+# SNS topics: primary (existing) + secondary (new)
+##################################################
 
 resource "aws_sns_topic" "alerts" {
   name = "multi-region-failover-alerts"
+  # created in default provider (primary region)
 }
 
 resource "aws_sns_topic_subscription" "email_alert" {
@@ -11,6 +12,20 @@ resource "aws_sns_topic_subscription" "email_alert" {
   protocol  = "email"
   endpoint  = var.alert_email
 }
+
+# SNS topic in the secondary region (so alarms in us-west-2 can reference it)
+resource "aws_sns_topic" "alerts_secondary" {
+  provider = aws.secondary
+  name     = "multi-region-failover-alerts-secondary"
+}
+
+resource "aws_sns_topic_subscription" "email_alert_secondary" {
+  provider  = aws.secondary
+  topic_arn = aws_sns_topic.alerts_secondary.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
 
 #############################################
 # CloudWatch Metric Alarms
@@ -74,15 +89,17 @@ resource "aws_cloudwatch_metric_alarm" "secondary_alb_unhealthy" {
   statistic           = "Average"
   threshold           = 0
   treat_missing_data  = "breaching"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  # use the SNS topic in the secondary region
+  alarm_actions       = [aws_sns_topic.alerts_secondary.arn]
 
   dimensions = {
     LoadBalancer = aws_lb.secondary_lb.arn_suffix
   }
 
-  # ensure LB and TG exist in secondary region before creating alarm
   depends_on = [aws_lb.secondary_lb, aws_lb_target_group.secondary_tg]
 }
+
 
 #############################################
 # CloudWatch Dashboard (created in primary region / default provider)

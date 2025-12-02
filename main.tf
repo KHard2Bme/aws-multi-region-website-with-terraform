@@ -21,15 +21,15 @@ module "secondary_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.0.0"
 
+  providers = {
+    aws = aws.secondary
+  }
+
   name = "secondary-vpc"
   cidr = var.secondary_vpc_cidr
 
   azs            = var.secondary_azs
   public_subnets = var.secondary_public_subnets
-
-  providers = {
-    aws = aws.secondary
-  }
 }
 
 #####################################
