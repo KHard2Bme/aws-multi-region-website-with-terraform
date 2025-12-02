@@ -61,7 +61,8 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_unhealthy" {
 
 # 3. Secondary ALB Unhealthy Hosts Alarm (optional but recommended)
 resource "aws_cloudwatch_metric_alarm" "secondary_alb_unhealthy" {
-  provider            = aws.secondary
+  provider = aws.secondary   
+
   alarm_name          = "Secondary-ALB-Unhealthy-Hosts"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -77,9 +78,10 @@ resource "aws_cloudwatch_metric_alarm" "secondary_alb_unhealthy" {
     TargetGroup  = aws_lb_target_group.secondary_tg.arn_suffix
   }
 
-  alarm_description = "Triggers when secondary ALB targets are unhealthy"
   alarm_actions     = [aws_sns_topic.alerts.arn]
+  alarm_description = "Triggers when secondary ALB targets are unhealthy"
 }
+
 
 
 ###############################################
@@ -94,54 +96,61 @@ resource "aws_cloudwatch_dashboard" "failover_dashboard" {
 
       # CloudFront Widget
       {
-        "type" : "metric",
-        "width" : 24,
-        "height" : 6,
-        "properties" : {
-          "title" : "CloudFront Requests & 5xx Errors",
-          "metrics" : [
+        "type": "metric",
+        "width": 24,
+        "height": 6,
+        "properties": {
+          "title": "CloudFront Requests & 5xx Errors",
+          "region": "us-east-1",
+          "annotations": {},
+          "metrics": [
             ["AWS/CloudFront", "Requests", "DistributionId", aws_cloudfront_distribution.site.id, "Region", "Global"],
             ["AWS/CloudFront", "5xxErrorRate", "DistributionId", aws_cloudfront_distribution.site.id, "Region", "Global"]
           ],
-          "view" : "timeSeries",
-          "stacked" : false,
-          "period" : 60
+          "view": "timeSeries",
+          "stacked": false,
+          "period": 60
         }
       },
 
-      # Primary ALB Health
+      # Primary ALB Widget
       {
-        "type" : "metric",
-        "width" : 24,
-        "height" : 6,
-        "properties" : {
-          "title" : "Primary ALB - Healthy vs Unhealthy Hosts",
-          "metrics" : [
+        "type": "metric",
+        "width": 24,
+        "height": 6,
+        "properties": {
+          "title": "Primary ALB - Healthy vs Unhealthy Hosts",
+          "region": "us-east-1",
+          "annotations": {},
+          "metrics": [
             ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", aws_lb.primary_lb.arn_suffix],
             ["AWS/ApplicationELB", "UnHealthyHostCount", "LoadBalancer", aws_lb.primary_lb.arn_suffix]
           ],
-          "view" : "timeSeries",
-          "stacked" : false,
-          "period" : 60
+          "view": "timeSeries",
+          "stacked": false,
+          "period": 60
         }
       },
 
-      # Secondary ALB Health
+      # Secondary ALB Widget
       {
-        "type" : "metric",
-        "width" : 24,
-        "height" : 6,
-        "properties" : {
-          "title" : "Secondary ALB - Healthy vs Unhealthy Hosts",
-          "metrics" : [
+        "type": "metric",
+        "width": 24,
+        "height": 6,
+        "properties": {
+          "title": "Secondary ALB - Healthy vs Unhealthy Hosts",
+          "region": "$(var.secondary_region)",
+          "annotations": {},
+          "metrics": [
             ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", aws_lb.secondary_lb.arn_suffix],
             ["AWS/ApplicationELB", "UnHealthyHostCount", "LoadBalancer", aws_lb.secondary_lb.arn_suffix]
           ],
-          "view" : "timeSeries",
-          "stacked" : false,
-          "period" : 60
+          "view": "timeSeries",
+          "stacked": false,
+          "period": 60
         }
       }
     ]
   })
 }
+
