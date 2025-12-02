@@ -61,7 +61,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_unhealthy" {
 
 # 3. Secondary ALB Unhealthy Hosts Alarm (optional but recommended)
 resource "aws_cloudwatch_metric_alarm" "secondary_alb_unhealthy" {
-  provider = aws.secondary   
+  provider            = aws.secondary   
 
   alarm_name          = "Secondary-ALB-Unhealthy-Hosts"
   comparison_operator = "GreaterThanThreshold"
