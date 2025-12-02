@@ -46,6 +46,11 @@ variable "ami_id2" {
   type = string
 }
 
+variable "alert_email" {
+  type        = string
+  description = "Email address for SNS CloudWatch alerts"
+}
+
 variable "instance_type" {
   type    = string
   default = "t3.micro"
