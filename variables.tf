@@ -20,6 +20,7 @@ variable "key_name" {
 
 variable "sns_email" {
   type        = string
+  default     = "harding_kevin@hotmail.com"
 }
 
 variable "az_count" {
