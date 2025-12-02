@@ -55,6 +55,7 @@ demos**, **training labs**, and **CloudFront failover validation**.
 # 📁 Repository Structure
 
     /
+    ├── failover-test.sh
     ├── main.tf
     ├── providers.tf
     ├── variables.tf
