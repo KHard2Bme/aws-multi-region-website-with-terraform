@@ -92,14 +92,7 @@ resource "aws_instance" "primary" {
   subnet_id              = module.primary_vpc.public_subnets[count.index]
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.web_sg.id]
-
-  user_data = <<-EOF
-              #!/bin/bash
-              yum install -y nginx
-              echo "<h1>PRIMARY REGION - Instance ${count.index}</h1>" > /usr/share/nginx/html/index.html
-              systemctl enable nginx
-              systemctl start nginx
-              EOF
+  user_data              = var.primary_user_data
 
   tags = {
     Name = "primary-${count.index}"
@@ -118,14 +111,7 @@ resource "aws_instance" "secondary" {
   key_name               = var.key_name
   provider               = aws.secondary
   vpc_security_group_ids = [aws_security_group.web_sg_secondary.id]
-
-  user_data = <<-EOF
-              #!/bin/bash
-              yum install -y nginx
-              echo "<h1>SECONDARY REGION - Failover Instance</h1>" > /usr/share/nginx/html/index.html
-              systemctl enable nginx
-              systemctl start nginx
-              EOF
+  user_data              = var.secondary_user_data
 
   tags = {
     Name = "secondary-0"
