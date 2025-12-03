@@ -46,13 +46,23 @@ resource "aws_security_group" "web_sg" {
   vpc_id      = module.primary_vpc.vpc_id
 
   ingress {
+    description = "HTTP from ALB"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+   ingress {
+    description = "Allow SSH (restricted)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
+    description = "All outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -67,13 +77,23 @@ resource "aws_security_group" "web_sg_secondary" {
   provider    = aws.secondary
 
   ingress {
+    description = "HTTP from ALB"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  
+  ingress {
+    description = "Allow SSH (restricted)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   egress {
+    description = "All outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -92,12 +112,17 @@ resource "aws_instance" "primary" {
   subnet_id              = module.primary_vpc.public_subnets[count.index]
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.web_sg.id]
-  user_data              = var.primary_user_data
+
+  user_data = var.primary_user_data
+
+  associate_public_ip_address = true
 
   tags = {
     Name = "primary-${count.index}"
   }
 }
+
+
 
 #####################################
 # EC2 Instances (Secondary Region)
@@ -111,12 +136,16 @@ resource "aws_instance" "secondary" {
   key_name               = var.key_name
   provider               = aws.secondary
   vpc_security_group_ids = [aws_security_group.web_sg_secondary.id]
-  user_data              = var.secondary_user_data
+
+  user_data = var.secondary_user_data
+
+  associate_public_ip_address = true
 
   tags = {
     Name = "secondary-0"
   }
 }
+
 
 #####################################
 # Primary ALB

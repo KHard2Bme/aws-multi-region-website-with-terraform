@@ -1,9 +1,12 @@
+# user_data.tf
+
 variable "primary_user_data" {
   type    = string
   default = <<-EOF
               #!/bin/bash
+              yum update -y
               yum install -y nginx
-              echo "<h1>PRIMARY REGION - Instance \${INSTANCE_ID}</h1>" > /usr/share/nginx/html/index.html
+              echo "<h1>PRIMARY REGION - Instance $(curl -s http://169.254.169.254/latest/meta-data/instance-id)</h1>" > /usr/share/nginx/html/index.html
               systemctl enable nginx
               systemctl start nginx
               EOF
@@ -13,8 +16,9 @@ variable "secondary_user_data" {
   type    = string
   default = <<-EOF
               #!/bin/bash
+              yum update -y
               yum install -y nginx
-              echo "<h1>SECONDARY REGION - Failover Instance</h1>" > /usr/share/nginx/html/index.html
+              echo "<h1>SECONDARY REGION - Failover Instance $(curl -s http://169.254.169.254/latest/meta-data/instance-id)</h1>" > /usr/share/nginx/html/index.html
               systemctl enable nginx
               systemctl start nginx
               EOF
