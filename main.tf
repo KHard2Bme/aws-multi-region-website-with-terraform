@@ -11,6 +11,8 @@ module "primary_vpc" {
 
   azs            = var.primary_azs
   public_subnets = var.primary_public_subnets
+
+ map_public_ip_on_launch = true 
 }
 
 #####################################
@@ -30,6 +32,8 @@ module "secondary_vpc" {
 
   azs            = var.secondary_azs
   public_subnets = var.secondary_public_subnets
+
+  map_public_ip_on_launch = true
 }
 
 #####################################
