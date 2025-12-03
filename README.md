@@ -163,7 +163,7 @@ Useful URLs for testing
 
 ## 👤 Author
 
-Created as part of a fully automated multi-region AWS failover system
+I created this project as a fully automated multi-region AWS failover system
 using Terraform and CloudWatch.
 
 ------------------------------------------------------------------------
