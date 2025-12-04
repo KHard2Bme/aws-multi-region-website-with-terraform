@@ -113,7 +113,7 @@ resource "aws_instance" "primary" {
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  user_data = file("${path.module}/user_data_primary.sh")
+  user_data = filebase64("${path.module}/user_data_primary.sh")
 
   associate_public_ip_address = true
 
@@ -136,7 +136,7 @@ resource "aws_instance" "secondary" {
   provider               = aws.secondary
   vpc_security_group_ids = [aws_security_group.web_sg_secondary.id]
 
-  user_data = file("${path.module}/user_data_secondary.sh")
+  user_data = filebase64("${path.module}/user_data_secondary.sh")
 
   associate_public_ip_address = true
 

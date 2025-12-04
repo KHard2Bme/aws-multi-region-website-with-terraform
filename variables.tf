@@ -58,7 +58,7 @@ variable "instance_type" {
 
 variable "key_name" {
   type    = string
-  default = "terraform-key"
+  default = "LUIT_Linux1_Keys"
 }
 
 
