@@ -1,10 +1,16 @@
 #!/bin/bash
-yum update -y
-# install NGINX
-yum install -y nginx
-# enable and start NGINX
+
+# Update packages
+dnf update -y
+
+# Install NGINX
+dnf install -y nginx
+
+# Enable and start NGINX
 systemctl enable nginx
 systemctl start nginx
-# create a simple index.html page
-echo "<h1>SECONDARY REGION! served from us-west-2. </h1>" > /usr/share/nginx/html/index.html
+
+# Create webpage
+echo "<h1>SECONDARY REGION - Served from us-west-2</h1>" > /usr/share/nginx/html/index.html
+
 

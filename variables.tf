@@ -39,11 +39,13 @@ variable "secondary_public_subnets" {
 }
 
 variable "ami_id" {
-  type = "ami-068c0051b15cdb816"
+  type    = string
+  default = "ami-068c0051b15cdb816"
 }
 
 variable "ami_id2" {
-  type = "ami-0ebf411a80b6b22cb"
+  type    = string
+  default = "ami-0ebf411a80b6b22cb"
 }
 
 variable "alert_email" {
