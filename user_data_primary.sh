@@ -1,10 +1,11 @@
 #!/bin/bash
-yum clean metadata
+# update packages
 yum update -y
+# install NGINX
 yum install -y nginx
-
+# enable and start NGINX
 systemctl enable nginx
 systemctl start nginx
-
-echo "<h1>PRIMARY REGION</h1>" > /usr/share/nginx/html/index.html
+# create a simple index.html page
+echo "<h1>PRIMARY REGION! served from us-east-1. </h1>" > /usr/share/nginx/html/index.html
 

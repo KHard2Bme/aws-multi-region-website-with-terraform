@@ -39,21 +39,21 @@ variable "secondary_public_subnets" {
 }
 
 variable "ami_id" {
-  type = string
+  type = "ami-068c0051b15cdb816"
 }
 
 variable "ami_id2" {
-  type = string
+  type = "ami-0ebf411a80b6b22cb"
 }
 
 variable "alert_email" {
   type        = string
-  description = "Email address for SNS CloudWatch alerts"
+  description = "harding_kevin@hotmail.com"
 }
 
 variable "instance_type" {
   type    = string
-  default = "t3.micro"
+  default = "t2.micro"
 }
 
 variable "key_name" {
