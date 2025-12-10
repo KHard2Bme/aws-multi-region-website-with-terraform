@@ -46,8 +46,11 @@ while true; do
         ORIGIN="Primary Region (AZ 2)"
         COLOR="\033[1;32m"
     elif echo "$RESPONSE" | grep -q "SECONDARY REGION FAILOVER"; then
-        ORIGIN="SECONDARY REGION FAILOVER"
+        ORIGIN="Secondary Region Failover"
         COLOR="\033[1;33m"   # yellow
+    elif echo "$RESPONSE" | grep -q "<h1>"; then
+        ORIGIN="Primary Region (AZ unknown)"
+        COLOR="\033[1;32m"   # green fallback for any valid page
     else
         ORIGIN="Unexpected response / Possibly 5xx"
         COLOR="\033[1;31m"   # red
@@ -58,3 +61,4 @@ while true; do
 
     sleep $INTERVAL
 done
+
