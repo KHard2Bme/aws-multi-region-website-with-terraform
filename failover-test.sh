@@ -3,13 +3,6 @@
 # ============================================================
 #  CloudFront Failover Automated Test Script
 # ============================================================
-# Continuously curls the CloudFront endpoint and identifies:
-#   - Which AZ is serving content (primary region)
-#   - Whether failover to secondary region occurs
-#   - Whether 5xx errors appear (CloudFront alarm trigger)
-#
-# Output is printed live + saved to failover.log
-# ============================================================
 
 CF_DOMAIN="$1"
 INTERVAL=2   # seconds between checks
@@ -38,22 +31,22 @@ while true; do
         continue
     fi
 
-    # Detect which backend served the request based on index.html content
-    if echo "$RESPONSE" | grep -q "PRIMARY REGION – AZ 0"; then
-        ORIGIN="Primary Region (AZ 1)"
-        COLOR="\033[1;32m"   # green
-    elif echo "$RESPONSE" | grep -q "PRIMARY REGION – AZ 1"; then
-        ORIGIN="Primary Region (AZ 2)"
+    # Detect which backend served the request
+    if echo "$RESPONSE" | grep -q "PRIMARY REGION - Instance 0"; then
+        ORIGIN="Primary Region - Instance 0 (AZ 1)"
         COLOR="\033[1;32m"
-    elif echo "$RESPONSE" | grep -q "SECONDARY REGION FAILOVER"; then
-        ORIGIN="Secondary Region Failover"
-        COLOR="\033[1;33m"   # yellow
+    elif echo "$RESPONSE" | grep -q "PRIMARY REGION - Instance 1"; then
+        ORIGIN="Primary Region - Instance 1 (AZ 2)"
+        COLOR="\033[1;32m"
+    elif echo "$RESPONSE" | grep -q "SECONDARY REGION - Failover Instance"; then
+        ORIGIN="Secondary Region - Failover Instance"
+        COLOR="\033[1;33m"
     elif echo "$RESPONSE" | grep -q "<h1>"; then
-        ORIGIN="Primary Region (AZ unknown)"
-        COLOR="\033[1;32m"   # green fallback for any valid page
+        ORIGIN="Primary Region (Unknown Instance)"
+        COLOR="\033[1;32m"
     else
         ORIGIN="Unexpected response / Possibly 5xx"
-        COLOR="\033[1;31m"   # red
+        COLOR="\033[1;31m"
     fi
 
     # Show output
@@ -61,4 +54,5 @@ while true; do
 
     sleep $INTERVAL
 done
+
 
