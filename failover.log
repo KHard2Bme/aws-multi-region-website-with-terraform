@@ -403,3 +403,23 @@
 [2025-12-10 20:03:59] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
 [2025-12-10 20:04:02] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
 [2025-12-10 20:04:04] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://d31g56rydjfsd8.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-10 22:26:23] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:25] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:28] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:31] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:34] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:36] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:39] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:41] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:43] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:45] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:47] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:49] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:52] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:54] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-10 22:26:56] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
