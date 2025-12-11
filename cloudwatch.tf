@@ -66,7 +66,7 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_unhealthy" {
   period              = 60
   statistic           = "Average"
   threshold           = 0
-  treat_missing_data  = "breaching"
+  treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 
   dimensions = {
@@ -88,7 +88,7 @@ resource "aws_cloudwatch_metric_alarm" "secondary_alb_unhealthy" {
   period              = 60
   statistic           = "Average"
   threshold           = 0
-  treat_missing_data  = "breaching"
+  treat_missing_data  = "notBreaching"
 
   # use the SNS topic in the secondary region
   alarm_actions       = [aws_sns_topic.alerts_secondary.arn]
