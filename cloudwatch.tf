@@ -25,34 +25,6 @@ resource "aws_sns_topic_subscription" "alerts_email_secondary" {
   endpoint  = var.alert_email
 }
 
-
-##########################################
-# CloudFront 5xx Error Rate Alarm (UNCHANGED)
-##########################################
-
-resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
-  alarm_name          = "CloudFront-5xx-ErrorRate"
-  alarm_description   = "Triggers when CloudFront 5xx error rate exceeds threshold"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "5xxErrorRate"
-  namespace           = "AWS/CloudFront"
-  period              = 60
-  statistic           = "Average"
-  threshold           = 1
-  treat_missing_data  = "missing"
-
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    DistributionId = aws_cloudfront_distribution.site.id
-    Region         = "Global"
-  }
-
-  depends_on = [aws_cloudfront_distribution.site]
-}
-
-
 ##########################################
 # PRIMARY ALB – Healthy Host Count Alarm
 ##########################################
@@ -66,12 +38,8 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_healthy" {
   namespace           = "AWS/ApplicationELB"
   period              = 60
   statistic           = "Average"
-
-  # EXPECTED = 2 EC2 instances
-  threshold = 2
-
-  # If an instance is stopped or removed, ALB reports missing → treat as breach
-  treat_missing_data = "breaching"
+  threshold           = 2
+  treat_missing_data  = "breaching"
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
@@ -84,6 +52,29 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_healthy" {
   depends_on = [aws_lb.primary_lb, aws_lb_target_group.primary_tg]
 }
 
+##########################################
+# PRIMARY EC2 StatusCheck Alarm 
+##########################################
+
+resource "aws_cloudwatch_metric_alarm" "primary_ec2_status" {
+  alarm_name          = "Primary-EC2-StatusCheckFailed"
+  alarm_description   = "Triggers when any primary EC2 instance fails status checks"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "StatusCheckFailed"
+  namespace           = "AWS/EC2"
+  statistic           = "Maximum"
+  period              = 60
+  threshold           = 0
+  treat_missing_data  = "breaching"
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    InstanceId = "*"  # Applies to all primary EC2 instances
+  }
+}
 
 ##########################################
 # SECONDARY ALB – Healthy Host Count Alarm
@@ -99,11 +90,8 @@ resource "aws_cloudwatch_metric_alarm" "secondary_alb_healthy" {
   namespace           = "AWS/ApplicationELB"
   period              = 60
   statistic           = "Average"
-
-  # Expected = 1 instance (secondary region)
-  threshold = 1
-
-  treat_missing_data = "breaching"
+  threshold           = 1
+  treat_missing_data  = "breaching"
 
   alarm_actions = [aws_sns_topic.alerts_secondary.arn]
   ok_actions    = [aws_sns_topic.alerts_secondary.arn]
@@ -288,35 +276,12 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
           title   = "Secondary EC2 Status Check"
           period  = 60
         }
-      },
-
-      # --- CloudFront 5xx Errors (Global) ---
-      {
-        type = "metric"
-        x    = 6
-        y    = 20
-        width  = 6
-        height = 6
-        properties = {
-          metrics = [
-            [
-              "AWS/CloudFront",
-              "5xxErrorRate",
-              "DistributionId", aws_cloudfront_distribution.site.id,
-              "Region", "Global"
-            ]
-          ]
-          view    = "timeSeries"
-          stacked = false
-          region  = "us-east-1"
-          title   = "CloudFront 5xx Errors"
-          period  = 60
-        }
       }
 
     ]
   })
 }
+
 
 
 
