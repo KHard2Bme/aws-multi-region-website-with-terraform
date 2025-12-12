@@ -50,7 +50,7 @@ variable "ami_id2" {
 
 variable "alert_email" {
   type        = string
-  description = "harding_kevin@hotmail.com"
+  default = "harding_kevin@hotmail.com"
 }
 
 variable "instance_type" {
