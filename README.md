@@ -43,15 +43,16 @@ A unified CloudWatch dashboard
 
 ## 🗂 Repository Structure
 
-    ├── main.tf
-    ├── variables.tf
-    ├── outputs.tf
-    ├── provider.tf
-    ├── ec2.tf
-    ├── alb.tf
-    ├── cloudfront.tf
     ├── cloudwatch.tf
-    ├── README.md  ← (this file)
+    ├── failover-test.sh
+    ├── failover.log
+    ├── main.tf
+    ├── outputs.tf
+    ├── providers.tf
+    ├── README.md  
+    ├── user_data_primary.sh
+    ├── user_data_secondary.sh
+    ├── variables.tf
 
 ------------------------------------------------------------------------
 
