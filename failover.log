@@ -925,3 +925,74 @@
 [2025-12-12 03:31:30] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
 [2025-12-12 03:31:34] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
 [2025-12-12 03:31:37] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-12 05:25:42] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-12 05:25:44] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-12 05:25:47] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-12 05:25:49] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-12 05:25:52] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-12 05:25:55] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-12 06:36:15] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-12 06:36:17] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-12 06:36:20] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-12 06:36:23] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-12 06:36:25] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-13 18:41:58] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:42:01] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 18:42:03] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:42:06] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 18:42:09] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-13 18:57:26] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:57:29] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:57:31] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:57:33] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 18:57:37] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-13 19:21:23] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 19:21:25] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 19:21:28] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 19:21:31] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 19:21:34] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-13 19:45:06] Origin: [1;33mSecondary Region - Failover Instance[0m
+[2025-12-13 19:45:09] Origin: [1;33mSecondary Region - Failover Instance[0m
+[2025-12-13 19:45:11] Origin: [1;33mSecondary Region - Failover Instance[0m
+[2025-12-13 19:45:14] Origin: [1;33mSecondary Region - Failover Instance[0m
+[2025-12-13 19:45:17] Origin: [1;33mSecondary Region - Failover Instance[0m
+============================================================
+ CloudFront Failover Test Started
+ Target: https://ddeao85i55vc6.cloudfront.net
+ Logging to: failover.log
+============================================================
+[2025-12-13 21:16:09] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 21:16:11] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 21:16:14] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m
+[2025-12-13 21:16:16] Origin: [1;32mPrimary Region - Instance 0 (AZ 1)[0m
+[2025-12-13 21:16:19] Origin: [1;32mPrimary Region - Instance 1 (AZ 2)[0m

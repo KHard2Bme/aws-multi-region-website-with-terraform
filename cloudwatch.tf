@@ -57,24 +57,30 @@ resource "aws_cloudwatch_metric_alarm" "primary_alb_healthy" {
 ##########################################
 
 resource "aws_cloudwatch_metric_alarm" "primary_ec2_status" {
-  alarm_name          = "Primary-EC2-StatusCheckFailed"
-  alarm_description   = "Triggers when any primary EC2 instance fails status checks"
-  comparison_operator = "GreaterThanThreshold"
+  count = length(aws_instance.primary)
+
+  alarm_name          = "Primary-EC2-StatusCheckFailed-${aws_instance.primary[count.index].id}"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
   metric_name         = "StatusCheckFailed"
   namespace           = "AWS/EC2"
-  statistic           = "Maximum"
   period              = 60
-  threshold           = 0
-  treat_missing_data  = "breaching"
+  statistic           = "Maximum"
+  threshold           = 1
+  alarm_description   = "Triggers if the primary instance fails system or instance checks."
+
+  dimensions = {
+    InstanceId = aws_instance.primary[count.index].id
+  }
+
+  treat_missing_data = "notBreaching"
+  actions_enabled    = true
 
   alarm_actions = [aws_sns_topic.alerts.arn]
   ok_actions    = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    InstanceId = "*"  # Applies to all primary EC2 instances
-  }
 }
+
+
 
 ##########################################
 # SECONDARY ALB – Healthy Host Count Alarm
