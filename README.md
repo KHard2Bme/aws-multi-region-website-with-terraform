@@ -1,173 +1,139 @@
-# Multi-Region AWS Failover Infrastructure (Terraform)
+# Multi-Region AWS Infrastructure with CloudFront Failover
 
-This project deploys a **high‑availability, multi‑region failover
-architecture** on AWS using **Terraform**.\
-The primary region (`us-east-1`) serves all traffic normally, while a
-secondary failover region (`us-west-2`) becomes active when the primary
-fails.\
-Failover is enabled through **CloudFront Origin Groups**, **ALBs**,
-**EC2 instances**, and **CloudWatch alarms with SNS notifications**.
+This repository contains Terraform code that deploys a highly available
+multi-region architecture using AWS services. The solution includes:
 
-------------------------------------------------------------------------
-
-## 🚀 Architecture Overview
-
-### **Primary Region (us-east-1)**
-
--   VPC with public subnets (multi‑AZ)
--   Application Load Balancer (ALB)
--   EC2 Auto-hosted NGINX servers
--   CloudWatch alarms for ALB health
--   CloudFront primary origin
-
-### **Secondary Region (us-west-2)**
-
--   VPC with public subnets (multi‑AZ)
--   ALB
--   EC2 failover instance
--   Region-specific CloudWatch alarms
--   CloudFront failover origin
-
-### **Global Services**
-
-  -----------------------------------------------------------------------
-  Component                             Purpose
-  ------------------------------------- ---------------------------------
-  **CloudFront**                        Distributes traffic globally;
-                                        handles failover via Origin
-                                        Groups
-
-  **CloudWatch Dashboard**              Visualizes ALB health, CloudFront
-                                        errors, request metrics
-
-  **SNS Notifications**                 Sends email alerts on alarm
-                                        triggers
-  -----------------------------------------------------------------------
-
-### **Terraform Features Used**
-
--   Multiple providers (`aws` + `aws.secondary`)
--   Modular VPC deployments
--   Cross-region CloudWatch alarms
--   CloudFront failover-based origin group
--   Auto-generated CloudWatch Dashboard
--   SNS email alerts
--   ALB target group health monitoring
+-   Multi-region EC2 instances (primary + secondary)
+-   Application Load Balancers (ALB) in each region
+-   CloudFront with Origin Groups for automatic failover
+-   CloudWatch alarms for primary/secondary health
+-   SNS notifications for failover and recovery
+-   A global CloudWatch dashboard
+-   Fully parameterized infrastructure via `variables.tf`
 
 ------------------------------------------------------------------------
 
-## 📁 Repository Structure
+## 🚀 Features
 
-    ├── main.tf                 # Main AWS architecture
-    ├── providers.tf            # Multi-region provider configuration
-    ├── variables.tf            # Input variables
-    ├── outputs.tf              # Terraform outputs
-    ├── cloudwatch.tf           # Alarms, dashboard, and SNS
-    ├── failover-test.sh        # Shell script for real failover testing
-    └── README.md               # Project documentation
+### **1. Highly Available Architecture**
 
-------------------------------------------------------------------------
+-   Primary region (`us-east-1`) hosts two EC2 instances behind an ALB.
+-   Secondary region (`us-west-2`) hosts a backup EC2 instance and ALB.
+-   CloudFront Origin Group provides regional failover.
 
-## 🧩 Key Components Breakdown
+### **2. Automated Failover**
 
-### **1. VPC Deployments**
+When the primary origin becomes unhealthy: - CloudFront automatically
+switches to the secondary region. - Alerts are triggered via SNS. -
+Recovery notifications are sent when the primary becomes healthy again.
 
-Primary VPC and Secondary VPC created using `terraform-aws-modules/vpc`.
+### **3. Monitoring & Observability**
 
-### **2. EC2 Instances**
+CloudWatch monitoring includes: - ALB HealthyHostCount alarms (primary &
+secondary) - EC2 CPU & Status checks - CloudFront performance metrics -
+A unified CloudWatch dashboard
 
--   Primary region: 2 EC2 servers across 2 AZs\
--   Secondary region: 1 EC2 server for failover\
--   All instances run a simple NGINX page identifying their region
+### **4. Complete Terraform Automation**
 
-### **3. Application Load Balancers**
-
-Each region has its own ALB with: - Security groups - Target groups -
-Listener rules - Health checks for failover eligibility
-
-### **4. CloudFront Global Distribution**
-
-Configured with: - Two origins (Primary/Secondary ALBs) - Origin Group
-for automatic failover - HTTPS enforcement - Global caching rules
-
-### **5. CloudWatch Alarms**
-
--   CloudFront 5xx Error Rate
--   Primary ALB unhealthy hosts
--   Secondary ALB unhealthy hosts (region-specific provider)
-
-All alarms notify via SNS email.
-
-### **6. CloudWatch Dashboard**
-
-Displays: - CloudFront metrics - ALB host health per region - Request
-counts - Single-value health indicators
-
-### **7. SNS Alerts**
-
-One SNS topic (`multi-region-failover-alerts`) with an email
-subscription.
-
-### **8. Failover Test Script**
-
-`failover-test.sh` simulates failures to validate: - ALB health checks -
-CloudFront failover behavior - Secondary region promotion
+-   Fully modular and parameterized.
+-   Supports quick region changes.
+-   Uses separate providers for multi-region deployments.
 
 ------------------------------------------------------------------------
 
-## 🛠️ Deploying This Project
+## 🗂 Repository Structure
+
+    ├── cloudwatch.tf
+    ├── failover-test.sh
+    ├── failover.log
+    ├── main.tf
+    ├── outputs.tf
+    ├── providers.tf
+    ├── README.md  
+    ├── user_data_primary.sh
+    ├── user_data_secondary.sh
+    ├── variables.tf
+
+------------------------------------------------------------------------
+
+## ⚙️ Requirements
+
+-   Terraform ≥ 1.0
+-   AWS CLI configured with proper IAM permissions
+-   A verified email address for SNS alerts
+
+------------------------------------------------------------------------
+
+## 🔧 Deployment Instructions
 
 ### **1. Initialize Terraform**
 
-``` sh
-terraform init
-```
+    terraform init
 
-### **2. Review the plan**
+### **2. Review the execution plan**
 
-``` sh
-terraform plan
-```
+    terraform plan
 
-### **3. Apply changes**
+### **3. Deploy the infrastructure**
 
-``` sh
-terraform apply
-```
+    terraform apply
 
-### **4. Confirm SNS Email Subscription**
+### **4. Destroy the environment (optional)**
 
-Check your inbox and confirm the subscription email.
+    terraform destroy
 
 ------------------------------------------------------------------------
 
-## 🧪 Testing Failover
+## 🧪 Failover Testing Guide
 
-Run:
+A full failover runbook is included:
 
-``` sh
-bash failover-test.sh
-```
+### **AZ-Level Failover**
 
-The script: - Sends test HTTP requests through CloudFront - Monitors
-failover behavior - Helps validate CloudFront → ALB → EC2 path
+-   Stop one EC2 instance in primary region.
+-   ALB HealthyHostCount should drop but traffic stays served.
+-   No CloudFront failover should occur.
+
+### **Region-Level Failover**
+
+-   Stop *both* instances in the primary region.
+-   ALB HealthyHostCount → 0 triggers SNS alarm.
+-   CloudFront switches to secondary origin.
+-   Restore primary instances and validate recovery.
+
+A downloadable checklist is available in the repository.
 
 ------------------------------------------------------------------------
 
-## 📬 Outputs
+## 📈 CloudWatch Dashboard
 
-After apply, Terraform provides: - ALB DNS names - CloudFront domain -
-Useful URLs for testing
+The included dashboard shows:
+
+-   Primary/Secondary ALB health
+-   EC2 metrics per region
+-   CloudFront 5xx errors
+-   Real-time load distribution
 
 ------------------------------------------------------------------------
 
-## 👤 Author
+## 📬 SNS Alerting
 
-I created this project as a fully automated multi-region AWS failover system
-using Terraform and CloudWatch.
+You will receive email notifications for: - Primary ALB health failure -
+Recovery of ALB/EC2 instances - Secondary region issues (if any)
+
+Be sure to confirm the subscription from AWS SNS before testing.
+
+------------------------------------------------------------------------
+
+## 🤝 Contributions
+
+Pull requests and feature suggestions are welcome.\
+Feel free to submit improvements for automation, monitoring, or failover
+logic.
 
 ------------------------------------------------------------------------
 
 ## 📄 License
 
-MIT License
+This project is licensed under the MIT License.
+
