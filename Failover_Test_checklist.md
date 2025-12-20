@@ -2,12 +2,12 @@
 
 1. Preparation Checklist
  
-• Confirm CloudFormation/Terraform deployments are completed successfully.
-• Verify CloudWatch alarms are active and in OK state.
-• Verify SNS notifications are subscribed and confirmed.
-• Record ALB DNS names, CloudFront distribution ID, and EC2 instance IDs.
-• Ensure health checks are configured correctly for ALBs and CloudFront.
-• Open CloudWatch dashboards in a separate window to observe metrics.
+- Confirm CloudFormation/Terraform deployments are completed successfully.
+- Verify CloudWatch alarms are active and in OK state.
+- Verify SNS notifications are subscribed and confirmed.
+- Record ALB DNS names, CloudFront distribution ID, and EC2 instance IDs.
+- Ensure health checks are configured correctly for ALBs and CloudFront.
+- Open CloudWatch dashboards in a separate window to observe metrics.
 
 2. AZ-Level Failover Test (Within Primary Region)
 
